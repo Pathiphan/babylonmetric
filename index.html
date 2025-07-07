@@ -9,8 +9,8 @@
   <script src="https://cdn.babylonjs.com/babylonjs.xr.min.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden;">
-  <h1>test 2</h1>
-  <p>ini kedua bro</p>
+  <h1>test3</h1>
+  <p>test 3</p>
   <canvas id="renderCanvas"></canvas>
   
   <script>
@@ -32,8 +32,8 @@
         uiOptions: { sessionMode: "immersive-ar" },
       });
 
-      // Load the .glb file from Google Drive
-      const fileUrl = "https://drive.google.com/uc?export=download&id=1hPDIFtTdDgtz22JqZe9B3n-XS-744shG"; // Replace with your Google Drive file ID
+      // Raw URL to the .glb file on GitHub
+      const fileUrl = "https://raw.githubusercontent.com/Pathiphan/babylonmetric/main/Lemari%20904E.glb"; // Use your actual GitHub URL here
       BABYLON.SceneLoader.Append("", fileUrl, scene, function () {
         console.log("Model loaded successfully");
       });
