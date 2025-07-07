@@ -1,9 +1,48 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Hello World</title>  <!-- Judul halaman browser -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Babylon.js AR</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/babylon.js.loaders.min.js"></script>
+  <script src="https://cdn.babylonjs.com/babylonjs.xr.min.js"></script>
 </head>
-<body>
-    Hello World!  <!-- Teks yang ditampilkan di halaman -->
+<body style="margin: 0; overflow: hidden;">
+  <h1>test</h1>
+  <p>eifhewiofhiwefh</p>
+  <canvas id="renderCanvas"></canvas>
+  
+  <script>
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true);
+    const scene = new BABYLON.Scene(engine);
+
+    // Setup Camera
+    const camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2, 10, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, true);
+
+    // Setup light
+    new BABYLON.HemisphericLight("light1", BABYLON.Vector3.Up(), scene);
+
+    // AR Setup
+    const xrHelper = await scene.createDefaultXRExperienceAsync({
+      uiOptions: { sessionMode: "immersive-ar" },
+    });
+
+    // Load the .glb file from Google Drive
+    const fileUrl = "https://drive.google.com/uc?export=download&id=1hPDIFtTdDgtz22JqZe9B3n-XS-744shG"; // Ganti dengan ID file Google Drive Anda
+    BABYLON.SceneLoader.Append("", fileUrl, scene, function () {
+      console.log("Model loaded successfully");
+    });
+
+    engine.runRenderLoop(function () {
+      scene.render();
+    });
+
+    window.addEventListener("resize", function () {
+      engine.resize();
+    });
+  </script>
 </body>
 </html>
