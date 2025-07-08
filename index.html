@@ -34,11 +34,12 @@
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">Arahkan HP untuk melihat ruangan desainmu 🛋️</div>
+  <div id="info">Arahkan HP untuk melihat desain ruanganmu 🏠</div>
 
   <script>
     let engine, scene, camera;
     let currentRotation = BABYLON.Quaternion.Identity();
+    const origin = new BABYLON.Vector3(0, 1.5, 0);
 
     function initScene() {
       const canvas = document.getElementById("renderCanvas");
@@ -46,29 +47,38 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      // Kamera di tengah ruangan (diam)
-      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, 0), scene);
+      // 📸 Kamera di tengah ruangan, mundur sedikit
+      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -2), scene);
+      camera.setTarget(origin);
+      camera.fov = 1.2; // Lebarkan sudut pandang
       camera.rotationQuaternion = currentRotation;
       camera.attachControl(canvas, false);
       camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 
+      // 💡 Pencahayaan global
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // Tambahkan model ruangan dan furniture
-      // Kamu bisa taruh beberapa model di posisi terpisah
+      // 📦 Import model ruangan dari GLB
       BABYLON.SceneLoader.Append("", "ruangan.glb", scene, () => {
-        console.log("Ruangan dimuat");
+        console.log("Model ruangan berhasil dimuat");
       });
 
-      // Giroskop sebagai rotasi kamera
+      // 🔄 Giroskop: rotasi pandang stabil
       window.addEventListener("deviceorientation", (event) => {
-        const yaw   = BABYLON.Tools.ToRadians(event.alpha || 0); // Horizontal
-        const pitch = BABYLON.Tools.ToRadians((event.beta || 0) - 90); // Vertikal
+        const alpha = event.alpha || 0;
+        const beta = event.beta || 0;
+
+        const yaw = BABYLON.Tools.ToRadians(alpha);
+        const pitchRaw = beta - 90;
+        const pitchClamped = Math.max(-60, Math.min(60, pitchRaw));
+        const pitch = BABYLON.Tools.ToRadians(pitchClamped);
 
         const targetRotation = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, 0);
-        currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRotation, 0.15);
+        currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRotation, 0.1);
 
         camera.rotationQuaternion = currentRotation;
+        camera.position = new BABYLON.Vector3(0, 1.5, -2); // Tetap diam
+        camera.setTarget(origin); // Fokus tetap ke tengah ruangan
       });
 
       engine.runRenderLoop(() => scene.render());
