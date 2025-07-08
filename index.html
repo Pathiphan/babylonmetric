@@ -62,10 +62,9 @@
       BABYLON.SceneLoader.Append("", "Lemari 904E.glb", scene, () => {
         const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
         if (mesh) {
-          // Atur skala dan posisi agar tampil penuh
-          mesh.scaling.set(2, 2, 2);       // Perbesar jika terlalu kecil
-          mesh.position.set(0, 0, 0);      // Pusatkan posisi
-          camera.target = mesh.position;  // Fokuskan kamera ke objek
+          mesh.scaling.set(2, 2, 2);         // Perbesar jika terlalu kecil
+          mesh.position.set(0, 0, 0);        // Pusatkan posisi
+          camera.target = mesh.position;    // Fokuskan kamera ke objek
           console.log("Model dimuat & disesuaikan");
         }
       });
@@ -75,27 +74,33 @@
     }
 
     async function startAR() {
-      const xr = await scene.createDefaultXRExperienceAsync({
-        uiOptions: { sessionMode: "immersive-ar" },
-        requiredFeatures: ["hit-test", "local-floor"]
-      });
+      try {
+        const xr = await scene.createDefaultXRExperienceAsync({
+          uiOptions: { sessionMode: "immersive-ar" },
+          optionalFeatures: ["unbounded"],
+          requiredFeatures: ["hit-test", "local-floor"]
+        });
 
-      const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
-      hitTest.onHitTestResultObservable.add((results) => {
-        const hit = results[0];
-        const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
-        if (!hit || !mesh) return;
+        const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
+        hitTest.onHitTestResultObservable.add((results) => {
+          const hit = results[0];
+          const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
+          if (!hit || !mesh) return;
 
-        const m = hit.transformationMatrix;
-        mesh.position.set(m[12], m[13], m[14]);
-        mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
-      });
+          const m = hit.transformationMatrix;
+          mesh.position.set(m[12], m[13], m[14]);
+          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
+        });
+      } catch (error) {
+        console.error("Gagal memulai AR:", error);
+        alert("Perangkat ini tidak mendukung AR, atau izin kamera ditolak.");
+      }
     }
 
-    // Inisialisasi scene terlebih dahulu
+    // Inisialisasi scene
     initScene();
 
-    // Tombol trigger AR
+    // Tombol AR
     document.getElementById("startAR").addEventListener("click", () => {
       startAR();
     });
