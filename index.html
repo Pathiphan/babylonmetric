@@ -12,7 +12,8 @@
 
   <style>
     html, body {
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
       font-family: sans-serif;
     }
@@ -54,21 +55,20 @@
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
+      camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
 
-      new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+      new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // LOAD FILE LOCALLY
-      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, function (newMeshes) {
-        const mesh = newMeshes.find(m => m.name !== "__root__");
+      // Load model from same folder
+      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, function (meshes) {
+        const mesh = meshes.find(m => m.name !== "__root__");
         if (mesh) {
           mesh.scaling.set(2, 2, 2);
           mesh.position.set(0, 0, 0);
           camera.target = mesh.position;
-          console.log("Model berhasil dimuat dari repo");
         }
       });
 
@@ -85,7 +85,7 @@
         });
 
         const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
-        hitTest.onHitTestResultObservable.add((results) => {
+        hitTest.onHitTestResultObservable.add(results => {
           const hit = results[0];
           const mesh = scene.meshes.find(m => m.name !== "__root__");
           if (!hit || !mesh) return;
@@ -96,7 +96,7 @@
         });
       } catch (err) {
         console.error("XR session gagal:", err);
-        alert("AR tidak bisa dimulai. Pastikan kamu memberi izin kamera dan menggunakan perangkat yang mendukung WebXR.");
+        alert("AR tidak bisa dimulai. Pastikan perangkatmu mendukung WebXR dan kamera diizinkan.");
       }
     }
 
