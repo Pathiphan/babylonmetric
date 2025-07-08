@@ -1,59 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Babylon.js AR</title>
+
+  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <script src="https://cdn.babylonjs.com/babylon.js.loaders.min.js"></script>
-  <script src="https://cdn.babylonjs.com/babylonjs.xr.min.js"></script>
+
+  <!-- GLTF Loader -->
+  <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
+
+  <!-- WebXR Support -->
+  <script src="https://cdn.babylonjs.com/XR/babylon.xr.js"></script>
+
+  <style>
+    html, body { margin: 0; overflow: hidden; }
+    canvas { width: 100%; height: 100%; display: block; }
+    input { position: absolute; top: 10px; left: 10px; z-index: 999; }
+  </style>
 </head>
-<body style="margin: 0; overflow: hidden;">
-  <h1>Babylon.js AR Test</h1>
-  <p>Test AR session with a .glb model</p>
-  <canvas id="renderCanvas" style="width: 100%; height: 100%;"></canvas>
-  
+<body>
+  <canvas id="renderCanvas"></canvas>
+
   <script>
-    // Wrapping the asynchronous code inside an async function
     async function init() {
       const canvas = document.getElementById("renderCanvas");
       const engine = new BABYLON.Engine(canvas, true);
       const scene = new BABYLON.Scene(engine);
 
-      // Setup Camera
-      const camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2, 10, BABYLON.Vector3.Zero(), scene);
+      // Camera
+      const camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2.5, 3, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
 
-      // Setup light
-      new BABYLON.HemisphericLight("light1", BABYLON.Vector3.Up(), scene);
+      // Light
+      new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // AR Setup (Immersive AR Session)
-      const xrHelper = await scene.createDefaultXRExperienceAsync({
-        uiOptions: { sessionMode: "immersive-ar" },
-      });
+      // Load model from Dropbox
+      const fileUrl = "https://www.dropbox.com/scl/fi/6166pa3mv1jx7o9nwq03h/Lemari-904E.glb?rlkey=1zg3enu2qfuzlaxtxh3wca9y1&st=r4arowzv&dl=1";
 
-      // GitHub Raw URL to the .glb file (ensure this is the raw link)
-      const fileUrl = "https://raw.githubusercontent.com/Pathiphan/babylonmetric/main/Lemari%20904E.glb"; 
-      
-      // Loading the .glb model into the scene
       BABYLON.SceneLoader.Append("", fileUrl, scene, function () {
         console.log("Model loaded successfully");
-      }, null, function (scene, message, exception) {
-        console.error("Error while loading the model:", message, exception);
       });
 
-      // Render the scene
-      engine.runRenderLoop(function () {
-        scene.render();
+      // Initialize WebXR (AR)
+      const xr = await scene.createDefaultXRExperienceAsync({
+        uiOptions: { sessionMode: "immersive-ar" },
+        requiredFeatures: ["hit-test", "local-floor"]
       });
 
-      // Resize handler
-      window.addEventListener("resize", function () {
-        engine.resize();
+      // Hit-test to place object
+      const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
+      hitTest.onHitTestResultObservable.add((results) => {
+        const hit = results[0];
+        if (!hit || scene.meshes.length < 1) return;
+
+        const mesh = scene.meshes[1]; // mesh[0] is ground/pointer
+        const m = hit.transformationMatrix;
+        mesh.position.set(m[12], m[13], m[14]);
+        mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
       });
+
+      // Render loop
+      engine.runRenderLoop(() => scene.render());
+      window.addEventListener("resize", () => engine.resize());
     }
 
-    // Call the init function to initialize the AR experience
+    // Start
     init();
   </script>
 </body>
