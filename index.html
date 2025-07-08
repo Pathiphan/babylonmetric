@@ -16,32 +16,25 @@
       background-color: black;
     }
     canvas {
-      width: 100vw;
-      height: 100vh;
-      display: block;
+      width: 100vw; height: 100vh; display: block;
     }
     #info {
       position: absolute;
-      top: 15px;
-      left: 50%;
+      top: 15px; left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 10px 16px;
-      border-radius: 8px;
-      font-size: 14px;
+      color: white; padding: 10px 16px;
+      border-radius: 8px; font-size: 14px;
       z-index: 2;
     }
     #sensorBtn {
       position: absolute;
-      bottom: 20px;
-      left: 50%;
+      bottom: 20px; left: 50%;
       transform: translateX(-50%);
       padding: 10px 20px;
       font-size: 14px;
       background: #0078D7;
-      color: white;
-      border: none;
+      color: white; border: none;
       border-radius: 6px;
       cursor: pointer;
       z-index: 2;
@@ -50,7 +43,7 @@
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">🔄 Putar HP untuk melihat desain ruangan virtual</div>
+  <div id="info">🔄 Putar HP untuk melihat ruangan desainmu</div>
   <button id="sensorBtn">Aktifkan Sensor</button>
 
   <script>
@@ -64,9 +57,9 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      camera = new BABYLON.FreeCamera("camera", center, scene);
-      camera.setTarget(center.add(new BABYLON.Vector3(0, 0, 1)));
-      camera.fov = 1.2;
+      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -2), scene);
+      camera.fov = 1.4;
+      camera.setTarget(center);
       camera.rotationQuaternion = currentRotation;
       camera.attachControl(canvas, false);
       camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
@@ -81,36 +74,33 @@
       engine.runRenderLoop(() => scene.render());
     }
 
-    function enableOrientation() {
-      const btn = document.getElementById("sensorBtn");
-      btn.style.display = "none";
+    function enableSensor() {
+      document.getElementById("sensorBtn").style.display = "none";
 
-      // iOS Safari membutuhkan izin manual
       if (
         typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function"
       ) {
         DeviceOrientationEvent.requestPermission()
-          .then((response) => {
+          .then(response => {
             if (response === "granted") {
               window.addEventListener("deviceorientation", onOrientation);
             } else {
-              alert("Izin sensor ditolak.");
+              alert("Izin sensor tidak diberikan.");
             }
           })
-          .catch((e) => console.error("Permission error:", e));
+          .catch(err => console.error("Permission error:", err));
       } else {
-        // Browser lain langsung aktif
         window.addEventListener("deviceorientation", onOrientation);
       }
     }
 
     function onOrientation(event) {
       const alpha = event.alpha || 0;
-      const beta = event.beta || 0;
+      const beta  = event.beta  || 0;
 
       const yaw = BABYLON.Tools.ToRadians(alpha);
-      const pitchRaw = beta - 90;
+      const pitchRaw = 90 - beta; // 🔁 arah dibalik agar natural
       const pitchClamped = Math.max(-60, Math.min(60, pitchRaw));
       const pitch = BABYLON.Tools.ToRadians(pitchClamped);
 
@@ -118,11 +108,11 @@
       currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRot, 0.1);
 
       camera.rotationQuaternion = currentRotation;
-      camera.position = center;
-      camera.setTarget(center.add(BABYLON.Vector3.Forward()));
+      camera.position = new BABYLON.Vector3(0, 1.5, -2);
+      camera.setTarget(center);
     }
 
-    document.getElementById("sensorBtn").addEventListener("click", enableOrientation);
+    document.getElementById("sensorBtn").addEventListener("click", enableSensor);
     initScene();
   </script>
 </body>
