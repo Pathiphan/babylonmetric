@@ -5,23 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Simulasi AR Lemari - Giroskop</title>
 
+  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <!-- glTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; background: black; }
-    canvas { width: 100vw; height: 100vh; display: block; position: absolute; z-index: 0; }
-    video#cameraFeed {
-      position: absolute; top: 0; left: 0;
+    html, body {
+      margin: 0; padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+      background: black;
+    }
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+      position: absolute;
+      z-index: 0;
+    }
+    #cameraFeed {
+      position: absolute;
+      top: 0; left: 0;
       width: 100vw; height: 100vh;
       object-fit: cover;
       z-index: -1;
     }
     #info {
       position: absolute;
-      bottom: 20px;
-      left: 50%; transform: translateX(-50%);
-      background: rgba(0, 0, 0, 0.6);
+      bottom: 15px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
       color: white;
       padding: 10px 16px;
       border-radius: 8px;
@@ -33,7 +48,7 @@
 <body>
   <video id="cameraFeed" autoplay muted playsinline></video>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">Mode giroskop: Arahkan HP untuk melihat sekeliling 📱</div>
+  <div id="info">Arahkan HP untuk melihat lemari virtual 📦</div>
 
   <script>
     let engine, scene, camera;
@@ -42,11 +57,12 @@
       try {
         const video = document.getElementById("cameraFeed");
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" }, audio: false
+          video: { facingMode: "environment" },
+          audio: false
         });
         video.srcObject = stream;
       } catch (err) {
-        console.warn("Kamera tidak bisa diakses:", err);
+        console.warn("Kamera gagal diakses:", err);
         document.getElementById("cameraFeed").style.display = "none";
       }
     }
@@ -57,10 +73,10 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -3), scene);
-      camera.setTarget(new BABYLON.Vector3(0, 1, 0));
+      // Posisikan kamera di belakang lemari
+      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -4), scene);
+      camera.setTarget(new BABYLON.Vector3(0, 1.5, 0));
       camera.attachControl(canvas, false);
-
       camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
@@ -69,21 +85,22 @@
         const furniture = meshes.find(m => m.name !== "__root__");
         if (furniture) {
           furniture.scaling.set(2, 2, 2);
-          furniture.position.set(0, 0, 0);
+          furniture.position.set(0, 0, 0); // Tetap di tempat
         }
       });
 
+      // Giroskop rotasi
       window.addEventListener("deviceorientation", (event) => {
-        const alpha = event.alpha || 0;
-        const beta = event.beta || 0;
-        const gamma = event.gamma || 0;
+        const alpha = event.alpha || 0;  // yaw
+        const beta  = event.beta  || 0;  // pitch
+        const gamma = event.gamma || 0;  // roll
 
-        const yaw = BABYLON.Tools.ToRadians(alpha);
+        const yaw   = BABYLON.Tools.ToRadians(alpha);
         const pitch = BABYLON.Tools.ToRadians(beta - 90);
-        const roll = BABYLON.Tools.ToRadians(gamma);
+        const roll  = BABYLON.Tools.ToRadians(gamma);
 
-        const quat = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, roll);
-        camera.rotationQuaternion = quat;
+        const rotation = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, roll);
+        camera.rotationQuaternion = rotation;
       });
 
       engine.runRenderLoop(() => scene.render());
