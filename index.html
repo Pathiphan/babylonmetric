@@ -3,17 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js AR - Lemari 904E</title>
+  <title>Babylon.js AR Fallback</title>
 
-  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <!-- GLTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
     html, body {
-      margin: 0;
-      padding: 0;
+      margin: 0; padding: 0;
       overflow: hidden;
       font-family: sans-serif;
     }
@@ -62,8 +59,7 @@
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // Load model from same folder
-      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, function (meshes) {
+      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, (meshes) => {
         const mesh = meshes.find(m => m.name !== "__root__");
         if (mesh) {
           mesh.scaling.set(2, 2, 2);
@@ -77,6 +73,13 @@
     }
 
     async function startAR() {
+      const supported = navigator.xr && await navigator.xr.isSessionSupported("immersive-ar");
+
+      if (!supported) {
+        alert("Perangkat ini tidak mendukung AR penuh. Menampilkan model biasa.");
+        return;
+      }
+
       try {
         const xr = await scene.createDefaultXRExperienceAsync({
           uiOptions: { sessionMode: "immersive-ar" },
@@ -85,7 +88,7 @@
         });
 
         const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
-        hitTest.onHitTestResultObservable.add(results => {
+        hitTest.onHitTestResultObservable.add((results) => {
           const hit = results[0];
           const mesh = scene.meshes.find(m => m.name !== "__root__");
           if (!hit || !mesh) return;
@@ -95,8 +98,8 @@
           mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
         });
       } catch (err) {
-        console.error("XR session gagal:", err);
-        alert("AR tidak bisa dimulai. Pastikan perangkatmu mendukung WebXR dan kamera diizinkan.");
+        console.warn("AR gagal dijalankan:", err);
+        alert("AR tidak bisa dimulai. Kemungkinan perangkat kamu tidak mendukung kamera AR.");
       }
     }
 
