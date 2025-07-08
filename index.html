@@ -15,32 +15,59 @@
   <script src="https://cdn.babylonjs.com/XR/babylon.xr.js"></script>
 
   <style>
-    html, body { margin: 0; overflow: hidden; }
+    html, body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
     canvas { width: 100%; height: 100%; display: block; }
+
+    #startAR {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #0078D7;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    @media (max-width: 600px) {
+      #startAR {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
+    }
   </style>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
+  <button id="startAR">Mulai AR</button>
 
   <script>
-    async function init() {
-      const canvas = document.getElementById("renderCanvas");
-      const engine = new BABYLON.Engine(canvas, true);
-      const scene = new BABYLON.Scene(engine);
+    let scene, engine;
 
-      // Camera setup
+    async function initScene() {
+      const canvas = document.getElementById("renderCanvas");
+      engine = new BABYLON.Engine(canvas, true);
+      scene = new BABYLON.Scene(engine);
+
       const camera = new BABYLON.ArcRotateCamera("camera1", Math.PI/2, Math.PI/2.5, 3, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
 
-      // Lighting
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // Load model from local path (same repo)
-      BABYLON.SceneLoader.Append("", "Lemari 904E.glb", scene, function () {
+      // Load local model
+      BABYLON.SceneLoader.Append("", "Lemari 904E.glb", scene, () => {
         console.log("Model loaded");
       });
 
-      // WebXR immersive-AR setup
+      engine.runRenderLoop(() => scene.render());
+      window.addEventListener("resize", () => engine.resize());
+    }
+
+    async function startAR() {
       const xr = await scene.createDefaultXRExperienceAsync({
         uiOptions: { sessionMode: "immersive-ar" },
         requiredFeatures: ["hit-test", "local-floor"]
@@ -51,17 +78,20 @@
         const hit = results[0];
         if (!hit || scene.meshes.length < 2) return;
 
-        const mesh = scene.meshes[1]; // mesh[0] mungkin pointer
+        const mesh = scene.meshes[1];
         const m = hit.transformationMatrix;
         mesh.position.set(m[12], m[13], m[14]);
         mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
       });
-
-      engine.runRenderLoop(() => scene.render());
-      window.addEventListener("resize", () => engine.resize());
     }
 
-    init();
+    // Inisialisasi scene terlebih dahulu
+    initScene();
+
+    // Trigger AR saat tombol ditekan
+    document.getElementById("startAR").addEventListener("click", () => {
+      startAR();
+    });
   </script>
 </body>
 </html>
