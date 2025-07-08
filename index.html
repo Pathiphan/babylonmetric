@@ -16,7 +16,7 @@
 
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
-    canvas { width: 100%; height: 100%; display: block; }
+    canvas { width: 100vw; height: 100vh; display: block; }
 
     #startAR {
       position: absolute;
@@ -46,21 +46,28 @@
   <button id="startAR">Mulai AR</button>
 
   <script>
-    let scene, engine;
+    let scene, engine, camera;
 
     async function initScene() {
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
 
-      const camera = new BABYLON.ArcRotateCamera("camera1", Math.PI/2, Math.PI/2.5, 3, BABYLON.Vector3.Zero(), scene);
+      camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // Load local model
       BABYLON.SceneLoader.Append("", "Lemari 904E.glb", scene, () => {
-        console.log("Model loaded");
+        const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
+        if (mesh) {
+          // Atur skala dan posisi agar tampil penuh
+          mesh.scaling.set(2, 2, 2);       // Perbesar jika terlalu kecil
+          mesh.position.set(0, 0, 0);      // Pusatkan posisi
+          camera.target = mesh.position;  // Fokuskan kamera ke objek
+          console.log("Model dimuat & disesuaikan");
+        }
       });
 
       engine.runRenderLoop(() => scene.render());
@@ -76,9 +83,9 @@
       const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
       hitTest.onHitTestResultObservable.add((results) => {
         const hit = results[0];
-        if (!hit || scene.meshes.length < 2) return;
+        const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
+        if (!hit || !mesh) return;
 
-        const mesh = scene.meshes[1];
         const m = hit.transformationMatrix;
         mesh.position.set(m[12], m[13], m[14]);
         mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
@@ -88,7 +95,7 @@
     // Inisialisasi scene terlebih dahulu
     initScene();
 
-    // Trigger AR saat tombol ditekan
+    // Tombol trigger AR
     document.getElementById("startAR").addEventListener("click", () => {
       startAR();
     });
