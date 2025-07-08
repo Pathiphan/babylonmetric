@@ -3,72 +3,42 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js Viewer - Lemari 904E</title>
+  <title>Simulasi AR Manual - Lemari 904E</title>
 
-  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <!-- GLTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
-    html, body {
-      margin: 0; padding: 0;
-      overflow: hidden;
-      background: black;
-      font-family: sans-serif;
-    }
-    canvas {
-      width: 100vw;
-      height: 100vh;
-      display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-    }
-    video#cameraFeed {
+    html, body { margin: 0; padding: 0; overflow: hidden; background: black; }
+    canvas { width: 100vw; height: 100vh; display: block; }
+    #cameraFeed {
       position: absolute;
       top: 0; left: 0;
       width: 100vw; height: 100vh;
       object-fit: cover;
       z-index: -1;
     }
-    #status {
+    #info {
       position: absolute;
       top: 15px;
       left: 50%;
       transform: translateX(-50%);
       background-color: rgba(0, 0, 0, 0.6);
-      color: #fff;
+      color: white;
       padding: 8px 16px;
       border-radius: 8px;
       font-size: 14px;
       z-index: 2;
-      text-align: center;
-    }
-    #info {
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.6);
-      color: white;
-      padding: 10px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 2;
-      text-align: center;
     }
   </style>
 </head>
 <body>
   <video id="cameraFeed" autoplay muted playsinline></video>
   <canvas id="renderCanvas"></canvas>
-  <div id="status">Memeriksa dukungan AR...</div>
-  <div id="info">Mode simulasi AR: Geser & zoom lemari manual</div>
+  <div id="info">Tap di layar untuk menaruh lemari 📦</div>
 
   <script>
-    let scene, engine, camera;
+    let scene, engine, camera, furniture;
 
     async function initCameraBackground() {
       try {
@@ -76,7 +46,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
         video.srcObject = stream;
       } catch (error) {
-        console.warn("Gagal akses kamera.");
+        console.warn("Tidak bisa akses kamera.");
         document.getElementById("cameraFeed").style.display = "none";
       }
     }
@@ -87,17 +57,24 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.2, 3, BABYLON.Vector3.Zero(), scene);
+      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -5), scene);
+      camera.setTarget(BABYLON.Vector3.Zero());
       camera.attachControl(canvas, true);
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
       BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, (meshes) => {
-        const mesh = meshes.find(m => m.name !== "__root__");
-        if (mesh) {
-          mesh.scaling.set(2, 2, 2);
-          mesh.position.set(0, 0, 0);
-          camera.target = mesh.position;
+        furniture = meshes.find(m => m.name !== "__root__");
+        if (furniture) {
+          furniture.scaling.set(2, 2, 2);
+          furniture.position.set(0, 0, 0);
+        }
+      });
+
+      canvas.addEventListener("pointerdown", function () {
+        const pick = scene.pick(scene.pointerX, scene.pointerY);
+        if (pick && pick.pickedPoint && furniture) {
+          furniture.position = pick.pickedPoint;
         }
       });
 
@@ -105,30 +82,8 @@
       window.addEventListener("resize", () => engine.resize());
     }
 
-    async function checkARSupport() {
-      const statusDiv = document.getElementById("status");
-
-      if (!navigator.xr || !navigator.xr.isSessionSupported) {
-        statusDiv.textContent = "Perangkat ini tidak mendukung WebXR.";
-        return;
-      }
-
-      try {
-        const isSupported = await navigator.xr.isSessionSupported("immersive-ar");
-        if (isSupported) {
-          statusDiv.textContent = "✅ Perangkat mendukung ARCore/WebXR — bisa digunakan untuk AR penuh.";
-        } else {
-          statusDiv.textContent = "⚠️ Perangkat tidak mendukung AR penuh. Menampilkan mode simulasi.";
-        }
-      } catch (err) {
-        statusDiv.textContent = "Gagal memeriksa dukungan AR.";
-        console.warn("XR check failed:", err);
-      }
-    }
-
     initCameraBackground();
     initScene();
-    checkARSupport();
   </script>
 </body>
 </html>
