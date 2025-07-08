@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simulasi Interior 360°</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Virtual Interior 360°</title>
 
+  <!-- Babylon.js Core + glTF Loader -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
@@ -12,7 +13,7 @@
     html, body {
       margin: 0; padding: 0;
       overflow: hidden;
-      background: black;
+      background-color: black;
     }
     canvas {
       width: 100vw;
@@ -21,7 +22,8 @@
     }
     #info {
       position: absolute;
-      top: 15px; left: 50%;
+      top: 15px;
+      left: 50%;
       transform: translateX(-50%);
       background: rgba(0,0,0,0.6);
       color: white;
@@ -34,12 +36,12 @@
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">Arahkan HP untuk melihat desain ruanganmu 🏠</div>
+  <div id="info">🔄 Putar HP untuk melihat sekeliling ruangan virtual 🏡</div>
 
   <script>
     let engine, scene, camera;
     let currentRotation = BABYLON.Quaternion.Identity();
-    const origin = new BABYLON.Vector3(0, 1.5, 0);
+    const center = new BABYLON.Vector3(0, 1.5, 0); // Titik tengah ruangan
 
     function initScene() {
       const canvas = document.getElementById("renderCanvas");
@@ -47,38 +49,36 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      // 📸 Kamera di tengah ruangan, mundur sedikit
-      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -2), scene);
-      camera.setTarget(origin);
-      camera.fov = 1.2; // Lebarkan sudut pandang
+      // Kamera tetap di titik tengah, rotasi mengikuti giroskop
+      camera = new BABYLON.FreeCamera("camera", center, scene);
+      camera.setTarget(center.add(new BABYLON.Vector3(0, 0, 1)));
+      camera.fov = 1.2; // Tampilan lebih lebar
       camera.rotationQuaternion = currentRotation;
       camera.attachControl(canvas, false);
       camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 
-      // 💡 Pencahayaan global
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // 📦 Import model ruangan dari GLB
+      // Import model ruangan: furniture + dinding + lantai dalam satu .glb
       BABYLON.SceneLoader.Append("", "ruangan.glb", scene, () => {
-        console.log("Model ruangan berhasil dimuat");
+        console.log("Model ruangan dimuat");
       });
 
-      // 🔄 Giroskop: rotasi pandang stabil
+      // Giroskop untuk rotasi arah pandang
       window.addEventListener("deviceorientation", (event) => {
-        const alpha = event.alpha || 0;
-        const beta = event.beta || 0;
+        const alpha = event.alpha || 0;  // yaw (horizontal)
+        const beta  = event.beta  || 0;  // pitch (atas-bawah)
 
-        const yaw = BABYLON.Tools.ToRadians(alpha);
-        const pitchRaw = beta - 90;
-        const pitchClamped = Math.max(-60, Math.min(60, pitchRaw));
+        const yaw   = BABYLON.Tools.ToRadians(alpha);
+        const pitchClamped = Math.max(-60, Math.min(60, beta - 90)); // batas sudut vertikal
         const pitch = BABYLON.Tools.ToRadians(pitchClamped);
 
-        const targetRotation = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, 0);
-        currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRotation, 0.1);
+        const targetRot = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, 0);
+        currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRot, 0.1);
 
         camera.rotationQuaternion = currentRotation;
-        camera.position = new BABYLON.Vector3(0, 1.5, -2); // Tetap diam
-        camera.setTarget(origin); // Fokus tetap ke tengah ruangan
+        camera.position = center;
+        camera.setTarget(center.add(BABYLON.Vector3.Forward()));
       });
 
       engine.runRenderLoop(() => scene.render());
