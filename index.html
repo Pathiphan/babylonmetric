@@ -5,16 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Babylon.js AR - Lemari 904E</title>
 
+  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-
+  <!-- GLTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
-  <script src="https://cdn.babylonjs.com/XR/babylon.webXR.min.js"></script> 
-
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
-    canvas { width: 100vw; height: 100vh; display: block; }
-
+    html, body {
+      margin: 0; padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
     #startAR {
       position: absolute;
       bottom: 20px;
@@ -29,7 +35,6 @@
       z-index: 10;
       cursor: pointer;
     }
-
     @media (max-width: 600px) {
       #startAR {
         font-size: 14px;
@@ -56,62 +61,47 @@
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // PERBAIKAN PENTING DI SINI: Gunakan ImportMesh dengan rootUrl dan fileName yang benar
-      BABYLON.SceneLoader.ImportMesh(
-        "", // nama mesh yang akan diimpor (kosong berarti semua)
-        "https://raw.githubusercontent.com/Pathiphan/babylonmetric/main/", // rootUrl tempat model berada
-        "Lemari%20904E.glb", // nama file model
-        scene,
-        function (newMeshes) {
-          console.log("Model dimuat & disesuaikan");
-          const mesh = newMeshes.find(m => m.name !== "__root__" && m.name !== "Ground"); // Cari mesh utama
-          if (mesh) {
-            mesh.scaling.set(2, 2, 2);    // Perbesar jika terlalu kecil
-            mesh.position.set(0, 0, 0);   // Pusatkan posisi
-            camera.target = mesh.position; // Fokuskan kamera ke objek
-          }
-        },
-        null, // progress callback
-        function (scene, message, exception) { // error callback
-          console.error("Error loading model:", message, exception);
+      // LOAD FILE LOCALLY
+      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, function (newMeshes) {
+        const mesh = newMeshes.find(m => m.name !== "__root__");
+        if (mesh) {
+          mesh.scaling.set(2, 2, 2);
+          mesh.position.set(0, 0, 0);
+          camera.target = mesh.position;
+          console.log("Model berhasil dimuat dari repo");
         }
-      );
+      });
 
       engine.runRenderLoop(() => scene.render());
       window.addEventListener("resize", () => engine.resize());
     }
 
     async function startAR() {
-      // Fungsi ini seharusnya berfungsi sekarang setelah script XR dimuat
-      const xr = await scene.createDefaultXRExperienceAsync({
-        uiOptions: { sessionMode: "immersive-ar" },
-        requiredFeatures: ["hit-test", "local-floor"]
-      });
+      try {
+        const xr = await scene.createDefaultXRExperienceAsync({
+          uiOptions: { sessionMode: "immersive-ar" },
+          requiredFeatures: ["hit-test", "local-floor"],
+          optionalFeatures: ["unbounded"]
+        });
 
-      // Pastikan hitTest diaktifkan hanya jika sesi AR berhasil dimulai
-      if (xr && xr.baseExperience) { // Tambahkan cek untuk 'xr' agar lebih aman
         const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
         hitTest.onHitTestResultObservable.add((results) => {
           const hit = results[0];
-          const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground"); // Cari mesh utama
+          const mesh = scene.meshes.find(m => m.name !== "__root__");
           if (!hit || !mesh) return;
 
           const m = hit.transformationMatrix;
           mesh.position.set(m[12], m[13], m[14]);
           mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
         });
-      } else {
-          console.warn("WebXR experience could not be created or baseExperience is undefined.");
+      } catch (err) {
+        console.error("XR session gagal:", err);
+        alert("AR tidak bisa dimulai. Pastikan kamu memberi izin kamera dan menggunakan perangkat yang mendukung WebXR.");
       }
     }
 
-    // Inisialisasi scene terlebih dahulu
     initScene();
-
-    // Tombol trigger AR
-    document.getElementById("startAR").addEventListener("click", () => {
-      startAR();
-    });
+    document.getElementById("startAR").addEventListener("click", startAR);
   </script>
 </body>
 </html>
