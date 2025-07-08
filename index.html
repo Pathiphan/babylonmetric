@@ -15,7 +15,9 @@
       overflow: hidden; background-color: black;
     }
     canvas {
-      width: 100vw; height: 100vh; display: block;
+      width: 100vw;
+      height: 100vh;
+      display: block;
     }
     #info {
       position: absolute;
@@ -35,7 +37,7 @@
   <script>
     let engine, scene, camera;
     let currentRotation = BABYLON.Quaternion.Identity();
-    const center = new BABYLON.Vector3(0, 1.5, 0);
+    const center = new BABYLON.Vector3(0, 1.5, 0); // Titik tengah ruangan
 
     function initScene() {
       const canvas = document.getElementById("renderCanvas");
@@ -43,6 +45,7 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
+      // Kamera di posisi tetap di belakang tengah ruangan
       camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -2), scene);
       camera.fov = 1.4;
       camera.setTarget(center);
@@ -52,6 +55,7 @@
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
+      // Import model ruangan lengkap .glb
       BABYLON.SceneLoader.Append("", "ruangan.glb", scene, () => {
         console.log("Model ruangan dimuat");
       });
@@ -60,8 +64,12 @@
       window.addEventListener("resize", () => engine.resize());
     }
 
-    function setupOrientation() {
-      // iOS Safari butuh izin eksplisit
+    function enableOrientationSensor() {
+      function activateSensor() {
+        window.addEventListener("deviceorientation", onOrientation);
+      }
+
+      // Untuk iOS Safari: butuh permintaan izin secara interaktif
       if (
         typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function"
@@ -69,23 +77,23 @@
         DeviceOrientationEvent.requestPermission()
           .then(response => {
             if (response === "granted") {
-              window.addEventListener("deviceorientation", onOrientation);
+              activateSensor();
             } else {
-              alert("Izin sensor tidak diberikan.");
+              console.warn("Izin sensor tidak diberikan.");
             }
           })
           .catch(err => console.error("Permission error:", err));
       } else {
-        window.addEventListener("deviceorientation", onOrientation);
+        activateSensor(); // Android / browser lain
       }
     }
 
     function onOrientation(event) {
-      const alpha = event.alpha || 0;
-      const beta  = event.beta  || 0;
+      const alpha = event.alpha || 0; // yaw (horizontal)
+      const beta  = event.beta  || 0; // pitch (vertical)
 
       const yaw = BABYLON.Tools.ToRadians(alpha);
-      const pitchRaw = 90 - beta; // ↕️ dibalik agar gerakan terasa natural
+      const pitchRaw = 90 - beta; // dibalik agar arah ke atas terasa natural
       const pitchClamped = Math.max(-60, Math.min(60, pitchRaw));
       const pitch = BABYLON.Tools.ToRadians(pitchClamped);
 
@@ -97,8 +105,10 @@
       camera.setTarget(center);
     }
 
+    // 🌐 Sensor diaktifkan otomatis saat halaman dimuat (setelah gesture pertama untuk iOS)
+    window.addEventListener("touchstart", enableOrientationSensor, { once: true });
+    window.addEventListener("mousedown", enableOrientationSensor, { once: true });
     initScene();
-    setupOrientation(); // 🔧 Langsung aktifkan sensor saat halaman dimuat
   </script>
 </body>
 </html>
