@@ -12,8 +12,7 @@
   <style>
     html, body {
       margin: 0; padding: 0;
-      overflow: hidden;
-      background-color: black;
+      overflow: hidden; background-color: black;
     }
     canvas {
       width: 100vw; height: 100vh; display: block;
@@ -27,24 +26,11 @@
       border-radius: 8px; font-size: 14px;
       z-index: 2;
     }
-    #sensorBtn {
-      position: absolute;
-      bottom: 20px; left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 20px;
-      font-size: 14px;
-      background: #0078D7;
-      color: white; border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      z-index: 2;
-    }
   </style>
 </head>
 <body>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">🔄 Putar HP untuk melihat ruangan desainmu</div>
-  <button id="sensorBtn">Aktifkan Sensor</button>
+  <div id="info">Putar HP untuk melihat desain ruangan virtual 🏠</div>
 
   <script>
     let engine, scene, camera;
@@ -70,13 +56,12 @@
         console.log("Model ruangan dimuat");
       });
 
-      window.addEventListener("resize", () => engine.resize());
       engine.runRenderLoop(() => scene.render());
+      window.addEventListener("resize", () => engine.resize());
     }
 
-    function enableSensor() {
-      document.getElementById("sensorBtn").style.display = "none";
-
+    function setupOrientation() {
+      // iOS Safari butuh izin eksplisit
       if (
         typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function"
@@ -100,7 +85,7 @@
       const beta  = event.beta  || 0;
 
       const yaw = BABYLON.Tools.ToRadians(alpha);
-      const pitchRaw = 90 - beta; // 🔁 arah dibalik agar natural
+      const pitchRaw = 90 - beta; // ↕️ dibalik agar gerakan terasa natural
       const pitchClamped = Math.max(-60, Math.min(60, pitchRaw));
       const pitch = BABYLON.Tools.ToRadians(pitchClamped);
 
@@ -112,8 +97,8 @@
       camera.setTarget(center);
     }
 
-    document.getElementById("sensorBtn").addEventListener("click", enableSensor);
     initScene();
+    setupOrientation(); // 🔧 Langsung aktifkan sensor saat halaman dimuat
   </script>
 </body>
 </html>
