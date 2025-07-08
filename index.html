@@ -3,29 +3,27 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simulasi AR Manual - Lemari 904E</title>
+  <title>Simulasi AR Lemari - Giroskop</title>
 
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
     html, body { margin: 0; padding: 0; overflow: hidden; background: black; }
-    canvas { width: 100vw; height: 100vh; display: block; }
-    #cameraFeed {
-      position: absolute;
-      top: 0; left: 0;
+    canvas { width: 100vw; height: 100vh; display: block; position: absolute; z-index: 0; }
+    video#cameraFeed {
+      position: absolute; top: 0; left: 0;
       width: 100vw; height: 100vh;
       object-fit: cover;
       z-index: -1;
     }
     #info {
       position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.6);
+      bottom: 20px;
+      left: 50%; transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.6);
       color: white;
-      padding: 8px 16px;
+      padding: 10px 16px;
       border-radius: 8px;
       font-size: 14px;
       z-index: 2;
@@ -35,54 +33,64 @@
 <body>
   <video id="cameraFeed" autoplay muted playsinline></video>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">Tap di layar untuk menaruh lemari 📦</div>
+  <div id="info">Mode giroskop: Arahkan HP untuk melihat sekeliling 📱</div>
 
   <script>
-    let scene, engine, camera, furniture;
+    let engine, scene, camera;
 
-    async function initCameraBackground() {
+    async function startCameraFeed() {
       try {
         const video = document.getElementById("cameraFeed");
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" }, audio: false
+        });
         video.srcObject = stream;
-      } catch (error) {
-        console.warn("Tidak bisa akses kamera.");
+      } catch (err) {
+        console.warn("Kamera tidak bisa diakses:", err);
         document.getElementById("cameraFeed").style.display = "none";
       }
     }
 
-    async function initScene() {
+    function initScene() {
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 0, -5), scene);
-      camera.setTarget(BABYLON.Vector3.Zero());
-      camera.attachControl(canvas, true);
+      camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -3), scene);
+      camera.setTarget(new BABYLON.Vector3(0, 1, 0));
+      camera.attachControl(canvas, false);
+
+      camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
       BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, (meshes) => {
-        furniture = meshes.find(m => m.name !== "__root__");
+        const furniture = meshes.find(m => m.name !== "__root__");
         if (furniture) {
           furniture.scaling.set(2, 2, 2);
           furniture.position.set(0, 0, 0);
         }
       });
 
-      canvas.addEventListener("pointerdown", function () {
-        const pick = scene.pick(scene.pointerX, scene.pointerY);
-        if (pick && pick.pickedPoint && furniture) {
-          furniture.position = pick.pickedPoint;
-        }
+      window.addEventListener("deviceorientation", (event) => {
+        const alpha = event.alpha || 0;
+        const beta = event.beta || 0;
+        const gamma = event.gamma || 0;
+
+        const yaw = BABYLON.Tools.ToRadians(alpha);
+        const pitch = BABYLON.Tools.ToRadians(beta - 90);
+        const roll = BABYLON.Tools.ToRadians(gamma);
+
+        const quat = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, roll);
+        camera.rotationQuaternion = quat;
       });
 
       engine.runRenderLoop(() => scene.render());
       window.addEventListener("resize", () => engine.resize());
     }
 
-    initCameraBackground();
+    startCameraFeed();
     initScene();
   </script>
 </body>
