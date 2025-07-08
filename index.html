@@ -5,15 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Babylon.js AR - Lemari 904E</title>
 
+  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
 
+  <!-- GLTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
-  <script src="https://cdn.babylonjs.com/XR/babylon.webXR.min.js"></script> 
-
   <style>
-    html, body { margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
-    canvas { width: 100vw; height: 100vh; display: block; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: sans-serif;
+    }
+
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
 
     #startAR {
       position: absolute;
@@ -56,58 +66,45 @@
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // Pastikan SceneLoader.ImportMesh atau Append diarahkan ke URL penuh jika tidak di root
-      // Menggunakan ImportMesh karena lebih disukai untuk debugging kesalahan
-      BABYLON.SceneLoader.ImportMesh(
-        "", // nama mesh yang akan diimpor (kosong berarti semua)
-        "https://raw.githubusercontent.com/Pathiphan/babylonmetric/main/", // rootUrl tempat model berada
-        "Lemari%20904E.glb", // nama file model
-        scene,
-        function (newMeshes) {
+      BABYLON.SceneLoader.Append("", "Lemari 904E.glb", scene, () => {
+        const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
+        if (mesh) {
+          mesh.scaling.set(2, 2, 2);
+          mesh.position.set(0, 0, 0);
+          camera.target = mesh.position;
           console.log("Model dimuat & disesuaikan");
-          const mesh = newMeshes.find(m => m.name !== "__root__"); // Cari mesh utama setelah impor
-          if (mesh) {
-            mesh.scaling.set(2, 2, 2);    // Perbesar jika terlalu kecil
-            mesh.position.set(0, 0, 0);   // Pusatkan posisi
-            camera.target = mesh.position; // Fokuskan kamera ke objek
-          }
-        },
-        null, // progress callback
-        function (scene, message, exception) { // error callback
-          console.error("Error loading model:", message, exception);
         }
-      );
+      });
 
       engine.runRenderLoop(() => scene.render());
       window.addEventListener("resize", () => engine.resize());
     }
 
     async function startAR() {
-      // Fungsi ini sekarang seharusnya berfungsi karena script XR sudah dimuat
-      const xr = await scene.createDefaultXRExperienceAsync({
-        uiOptions: { sessionMode: "immersive-ar" },
-        requiredFeatures: ["hit-test", "local-floor"]
-      });
+      try {
+        const xr = await scene.createDefaultXRExperienceAsync({
+          uiOptions: { sessionMode: "immersive-ar" },
+          optionalFeatures: ["unbounded"],
+          requiredFeatures: ["hit-test", "local-floor"]
+        });
 
-      // Pastikan hitTest diaktifkan hanya jika sesi AR berhasil dimulai
-      if (xr.baseExperience) {
         const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
         hitTest.onHitTestResultObservable.add((results) => {
           const hit = results[0];
-          const mesh = scene.meshes.find(m => m.name !== "__root__"); // Cari mesh utama
+          const mesh = scene.meshes.find(m => m.name !== "__root__" && m.name !== "Ground");
           if (!hit || !mesh) return;
 
           const m = hit.transformationMatrix;
           mesh.position.set(m[12], m[13], m[14]);
           mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
         });
+      } catch (error) {
+        console.error("Gagal memulai AR:", error);
+        alert("Perangkat ini tidak mendukung AR atau akses kamera ditolak.");
       }
     }
 
-    // Inisialisasi scene terlebih dahulu
     initScene();
-
-    // Tombol trigger AR
     document.getElementById("startAR").addEventListener("click", () => {
       startAR();
     });
