@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simulasi AR Lemari - Giroskop</title>
+  <title>Simulasi AR Lemari Stabil - Giroskop</title>
 
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
@@ -12,7 +12,6 @@
     html, body {
       margin: 0; padding: 0;
       overflow: hidden;
-      font-family: sans-serif;
       background: black;
     }
     canvas {
@@ -34,7 +33,7 @@
       bottom: 15px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
+      background: rgba(0, 0, 0, 0.6);
       color: white;
       padding: 10px 16px;
       border-radius: 8px;
@@ -50,6 +49,8 @@
 
   <script>
     let engine, scene, camera;
+    let currentRotation = BABYLON.Quaternion.Identity();
+    const targetPoint = new BABYLON.Vector3(0, 1.5, 0); // Titik lemari
 
     async function startCameraFeed() {
       try {
@@ -71,10 +72,12 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
+      // Posisi kamera tetap di belakang objek
       camera = new BABYLON.FreeCamera("camera", new BABYLON.Vector3(0, 1.5, -6), scene);
-      camera.setTarget(new BABYLON.Vector3(0, 1.5, 0));
+      camera.setTarget(targetPoint);
       camera.attachControl(canvas, false);
       camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+      camera.rotationQuaternion = currentRotation;
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
@@ -82,22 +85,24 @@
         const furniture = meshes.find(m => m.name !== "__root__");
         if (furniture) {
           furniture.scaling.set(2, 2, 2);
-          furniture.position.set(0, 0, 0); // Lemari tetap diam
+          furniture.position.set(0, 0, 0); // Lemari diam
         }
       });
 
       window.addEventListener("deviceorientation", (event) => {
         const alpha = event.alpha || 0;
         const beta  = event.beta  || 0;
-        const gamma = event.gamma || 0;
 
-        // Convert ke rotasi dan stabilkan offset
+        // Ambil yaw & pitch saja untuk rotasi stabil
         const yaw   = BABYLON.Tools.ToRadians(alpha);
-        const pitch = BABYLON.Tools.ToRadians(beta - 90); // offset smartphone
-        const roll  = BABYLON.Tools.ToRadians(gamma);
+        const pitch = BABYLON.Tools.ToRadians(beta - 90); // offset normal HP
 
-        const rotation = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, roll);
-        camera.rotationQuaternion = rotation;
+        const targetRotation = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, 0);
+        currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRotation, 0.15);
+
+        camera.rotationQuaternion = currentRotation;
+        camera.position = new BABYLON.Vector3(0, 1.5, -6); // Kunci posisi
+        camera.setTarget(targetPoint);
       });
 
       engine.runRenderLoop(() => scene.render());
