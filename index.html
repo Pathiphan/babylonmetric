@@ -9,9 +9,9 @@
   <script src="https://cdn.babylonjs.com/babylonjs.xr.min.js"></script>
 </head>
 <body style="margin: 0; overflow: hidden;">
-  <h1>test 2</h1>
-  <p>test 2</p>
-  <canvas id="renderCanvas"></canvas>
+  <h1>Babylon.js AR Test</h1>
+  <p>Test AR session with a .glb model</p>
+  <canvas id="renderCanvas" style="width: 100%; height: 100%;"></canvas>
   
   <script>
     // Wrapping the asynchronous code inside an async function
@@ -27,15 +27,19 @@
       // Setup light
       new BABYLON.HemisphericLight("light1", BABYLON.Vector3.Up(), scene);
 
-      // AR Setup
+      // AR Setup (Immersive AR Session)
       const xrHelper = await scene.createDefaultXRExperienceAsync({
         uiOptions: { sessionMode: "immersive-ar" },
       });
 
-      // GitHub Raw URL to the .glb file
-      const fileUrl = "https://raw.githubusercontent.com/Pathiphan/babylonmetric/main/Lemari%20904E.glb";
+      // GitHub Raw URL to the .glb file (ensure this is the raw link)
+      const fileUrl = "https://raw.githubusercontent.com/Pathiphan/babylonmetric/main/Lemari%20904E.glb"; 
+      
+      // Loading the .glb model into the scene
       BABYLON.SceneLoader.Append("", fileUrl, scene, function () {
         console.log("Model loaded successfully");
+      }, null, function (scene, message, exception) {
+        console.error("Error while loading the model:", message, exception);
       });
 
       // Render the scene
