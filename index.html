@@ -1,11 +1,12 @@
-(Web AR)bisa dengan status bisa atau tidaknya ar core
+(Web AR)dengan arcore tanpa cdn webxr
+
 
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js Viewer - Lemari 904E</title>
+  <title>Babylon.js AR - Lemari 904E</title>
 
   <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -16,90 +17,61 @@
     html, body {
       margin: 0; padding: 0;
       overflow: hidden;
-      background: black;
       font-family: sans-serif;
     }
     canvas {
       width: 100vw;
       height: 100vh;
       display: block;
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
     }
-    video#cameraFeed {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100vw; height: 100vh;
-      object-fit: cover;
-      z-index: -1;
-    }
-    #status {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.6);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      z-index: 2;
-      text-align: center;
-    }
-    #info {
+    #startAR {
       position: absolute;
       bottom: 20px;
       left: 50%;
       transform: translateX(-50%);
-      background-color: rgba(0, 0, 0, 0.6);
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #0078D7;
       color: white;
-      padding: 10px 20px;
+      border: none;
       border-radius: 8px;
-      font-size: 14px;
-      z-index: 2;
-      text-align: center;
+      z-index: 10;
+      cursor: pointer;
+    }
+    @media (max-width: 600px) {
+      #startAR {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
     }
   </style>
 </head>
 <body>
-  <video id="cameraFeed" autoplay muted playsinline></video>
   <canvas id="renderCanvas"></canvas>
-  <div id="status">Memeriksa dukungan AR...</div>
-  <div id="info">Mode simulasi AR: Geser & zoom lemari manual</div>
+  <button id="startAR">Mulai AR</button>
 
   <script>
     let scene, engine, camera;
-
-    async function initCameraBackground() {
-      try {
-        const video = document.getElementById("cameraFeed");
-        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
-        video.srcObject = stream;
-      } catch (error) {
-        console.warn("Gagal akses kamera.");
-        document.getElementById("cameraFeed").style.display = "none";
-      }
-    }
 
     async function initScene() {
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
 
-      camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.2, 3, BABYLON.Vector3.Zero(), scene);
+      camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
 
-      new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
+      new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, (meshes) => {
-        const mesh = meshes.find(m => m.name !== "__root__");
+      // LOAD FILE LOCALLY
+      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, function (newMeshes) {
+        const mesh = newMeshes.find(m => m.name !== "__root__");
         if (mesh) {
           mesh.scaling.set(2, 2, 2);
           mesh.position.set(0, 0, 0);
           camera.target = mesh.position;
+          console.log("Model berhasil dimuat dari repo");
         }
       });
 
@@ -107,30 +79,32 @@
       window.addEventListener("resize", () => engine.resize());
     }
 
-    async function checkARSupport() {
-      const statusDiv = document.getElementById("status");
-
-      if (!navigator.xr || !navigator.xr.isSessionSupported) {
-        statusDiv.textContent = "Perangkat ini tidak mendukung WebXR.";
-        return;
-      }
-
+    async function startAR() {
       try {
-        const isSupported = await navigator.xr.isSessionSupported("immersive-ar");
-        if (isSupported) {
-          statusDiv.textContent = "✅ Perangkat mendukung ARCore/WebXR — bisa digunakan untuk AR penuh.";
-        } else {
-          statusDiv.textContent = "⚠️ Perangkat tidak mendukung AR penuh. Menampilkan mode simulasi.";
-        }
+        const xr = await scene.createDefaultXRExperienceAsync({
+          uiOptions: { sessionMode: "immersive-ar" },
+          requiredFeatures: ["hit-test", "local-floor"],
+          optionalFeatures: ["unbounded"]
+        });
+
+        const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
+        hitTest.onHitTestResultObservable.add((results) => {
+          const hit = results[0];
+          const mesh = scene.meshes.find(m => m.name !== "__root__");
+          if (!hit || !mesh) return;
+
+          const m = hit.transformationMatrix;
+          mesh.position.set(m[12], m[13], m[14]);
+          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
+        });
       } catch (err) {
-        statusDiv.textContent = "Gagal memeriksa dukungan AR.";
-        console.warn("XR check failed:", err);
+        console.error("XR session gagal:", err);
+        alert("AR tidak bisa dimulai. Pastikan kamu memberi izin kamera dan menggunakan perangkat yang mendukung WebXR.");
       }
     }
 
-    initCameraBackground();
     initScene();
-    checkARSupport();
+    document.getElementById("startAR").addEventListener("click", startAR);
   </script>
 </body>
 </html>
