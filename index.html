@@ -61,7 +61,7 @@
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // LOAD GLB LANGSUNG DARI GITHUB PAGES
+      // 🔄 LOAD GLB LANGSUNG DARI GITHUB PAGES
       BABYLON.SceneLoader.ImportMesh("", "assets/", "ruangan_auto.glb", scene, function (newMeshes) {
         const mesh = newMeshes.find(m => m.name !== "__root__");
         if (mesh) {
