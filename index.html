@@ -3,18 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js AR - Ruangan Auto Export</title>
+  <title>Babylon.js AR - Ruangan Viewer</title>
 
   <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <!-- GLTF Loader -->
+  <!-- glTF2 Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
     html, body {
-      margin: 0; padding: 0;
+      margin: 0;
+      padding: 0;
       overflow: hidden;
-      font-family: sans-serif;
+      background-color: #000;
     }
     canvas {
       width: 100vw;
@@ -32,8 +33,8 @@
       color: white;
       border: none;
       border-radius: 8px;
-      z-index: 10;
       cursor: pointer;
+      z-index: 10;
     }
     @media (max-width: 600px) {
       #startAR {
@@ -56,21 +57,22 @@
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
 
-      camera = new BABYLON.ArcRotateCamera("camera1", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
+      // Kamera orbit default
+      camera = new BABYLON.ArcRotateCamera("arcCamera", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
+      camera.lowerRadiusLimit = 1;
+      camera.upperRadiusLimit = 20;
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // 🔄 LOAD GLB LANGSUNG DARI GITHUB PAGES
-      BABYLON.SceneLoader.ImportMesh("", "assets/", "ruangan_auto.glb", scene, function (newMeshes) {
-        const mesh = newMeshes.find(m => m.name !== "__root__");
-        if (mesh) {
-          mesh.scaling.set(2, 2, 2);
-          mesh.position.set(0, 0, 0);
-          camera.target = mesh.position;
-          console.log("✅ Model berhasil dimuat dari GitHub Pages!");
+      // Import GLB dari folder "assets/"
+      BABYLON.SceneLoader.ImportMesh("", "assets/", "ruangan_auto.glb", scene, function (meshes) {
+        const rootless = meshes.find(m => m.name !== "__root__");
+        if (rootless) {
+          camera.target = rootless.getBoundingInfo().boundingBox.centerWorld;
+          console.log("✅ Model berhasil dimuat");
         } else {
-          console.warn("⚠️ Model tidak ditemukan atau belum dimuat.");
+          console.warn("⚠️ Mesh utama tidak ditemukan.");
         }
       });
 
@@ -82,8 +84,7 @@
       try {
         const xr = await scene.createDefaultXRExperienceAsync({
           uiOptions: { sessionMode: "immersive-ar" },
-          requiredFeatures: ["hit-test", "local-floor"],
-          optionalFeatures: ["unbounded"]
+          requiredFeatures: ["hit-test", "local-floor"]
         });
 
         const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
@@ -92,13 +93,13 @@
           const mesh = scene.meshes.find(m => m.name !== "__root__");
           if (!hit || !mesh) return;
 
-          const m = hit.transformationMatrix;
-          mesh.position.set(m[12], m[13], m[14]);
-          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
+          const mat = hit.transformationMatrix;
+          mesh.position.set(mat[12], mat[13], mat[14]);
+          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(mat));
         });
       } catch (err) {
-        console.error("❌ XR session gagal:", err);
-        alert("AR tidak bisa dimulai. Pastikan kamu memberi izin kamera dan menggunakan perangkat yang mendukung WebXR.");
+        console.error("❌ XR gagal:", err);
+        alert("Perangkat ini tidak mendukung WebXR atau izin kamera belum diberikan.");
       }
     }
 
