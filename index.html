@@ -55,9 +55,8 @@
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      // Kamera orbit default
       camera = new BABYLON.ArcRotateCamera("arcCamera", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
       camera.lowerRadiusLimit = 1;
@@ -65,12 +64,14 @@
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // Import GLB dari folder "assets/"
-      BABYLON.SceneLoader.ImportMesh("", "assets/", "ruangan_auto.glb", scene, function (meshes) {
-        const rootless = meshes.find(m => m.name !== "__root__");
-        if (rootless) {
-          camera.target = rootless.getBoundingInfo().boundingBox.centerWorld;
-          console.log("✅ Model berhasil dimuat");
+      const cacheBypass = new Date().getTime();
+      const fileName = `ruangan_auto.glb?cache=${cacheBypass}`;
+
+      BABYLON.SceneLoader.ImportMesh("", "assets/", fileName, scene, function (meshes) {
+        const rootMesh = meshes.find(m => m.name !== "__root__");
+        if (rootMesh) {
+          camera.target = rootMesh.getBoundingInfo().boundingBox.centerWorld;
+          console.log("✅ Model dimuat:", rootMesh.name);
         } else {
           console.warn("⚠️ Mesh utama tidak ditemukan.");
         }
@@ -93,13 +94,13 @@
           const mesh = scene.meshes.find(m => m.name !== "__root__");
           if (!hit || !mesh) return;
 
-          const mat = hit.transformationMatrix;
-          mesh.position.set(mat[12], mat[13], mat[14]);
-          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(mat));
+          const m = hit.transformationMatrix;
+          mesh.position.set(m[12], m[13], m[14]);
+          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
         });
       } catch (err) {
         console.error("❌ XR gagal:", err);
-        alert("Perangkat ini tidak mendukung WebXR atau izin kamera belum diberikan.");
+        alert("Perangkat kamu tidak mendukung WebXR atau izin kamera belum diberikan.");
       }
     }
 
