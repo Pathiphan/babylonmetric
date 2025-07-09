@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js AR - Ruangan Viewer</title>
+  <title>Babylon.js AR - Viewer via CDN</title>
 
   <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
-  <!-- GLTF2 Loader -->
+  <!-- GLTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
@@ -55,7 +55,7 @@
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
-      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
       camera = new BABYLON.ArcRotateCamera("arcCamera", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
       camera.attachControl(canvas, true);
@@ -64,15 +64,15 @@
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // 🔄 Tambahkan cache-bypass agar model terbaru selalu dimuat
-      const timestamp = new Date().getTime();
-      const fileName = `ruangan_auto.glb?t=${timestamp}`;
+      // Load langsung dari CDN GitHub jsDelivr tanpa deploy delay
+      const timestamp = Date.now();
+      const cdnURL = `https://cdn.jsdelivr.net/gh/Pathiphan/babylonmetric@main/assets/ruangan_auto.glb?t=${timestamp}`;
 
-      BABYLON.SceneLoader.ImportMesh("", "assets/", fileName, scene, function (meshes) {
+      BABYLON.SceneLoader.ImportMesh("", "", cdnURL, scene, function (meshes) {
         const mesh = meshes.find(m => m.name !== "__root__");
         if (mesh) {
           camera.target = mesh.getBoundingInfo().boundingBox.centerWorld;
-          console.log("✅ Model berhasil dimuat:", mesh.name);
+          console.log("✅ Model berhasil dimuat dari CDN:", mesh.name);
         } else {
           console.warn("⚠️ Model tidak ditemukan.");
         }
@@ -101,7 +101,7 @@
         });
       } catch (err) {
         console.error("❌ Gagal memulai AR:", err);
-        alert("AR tidak tersedia. Cek izin kamera dan dukungan WebXR.");
+        alert("Perangkat tidak mendukung WebXR atau belum memberi izin kamera.");
       }
     }
 
