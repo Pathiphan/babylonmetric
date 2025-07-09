@@ -1,11 +1,15 @@
+(Web AR)bisa dengan status bisa atau tidaknya ar core
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simulasi Interior 360°</title>
+  <title>Babylon.js Viewer - Lemari 904E</title>
 
+  <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <!-- GLTF Loader -->
   <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
 
   <style>
@@ -13,71 +17,120 @@
       margin: 0; padding: 0;
       overflow: hidden;
       background: black;
+      font-family: sans-serif;
     }
     canvas {
       width: 100vw;
       height: 100vh;
       display: block;
-    }
-    #info {
       position: absolute;
-      top: 15px; left: 50%;
+      top: 0;
+      left: 0;
+      z-index: 0;
+    }
+    video#cameraFeed {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      object-fit: cover;
+      z-index: -1;
+    }
+    #status {
+      position: absolute;
+      top: 15px;
+      left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
-      color: white;
-      padding: 10px 16px;
+      background-color: rgba(0, 0, 0, 0.6);
+      color: #fff;
+      padding: 8px 16px;
       border-radius: 8px;
       font-size: 14px;
       z-index: 2;
+      text-align: center;
+    }
+    #info {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: rgba(0, 0, 0, 0.6);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      z-index: 2;
+      text-align: center;
     }
   </style>
 </head>
 <body>
+  <video id="cameraFeed" autoplay muted playsinline></video>
   <canvas id="renderCanvas"></canvas>
-  <div id="info">Putar HP untuk melihat ruangan desainmu 🛋️</div>
+  <div id="status">Memeriksa dukungan AR...</div>
+  <div id="info">Mode simulasi AR: Geser & zoom lemari manual</div>
 
   <script>
-    let engine, scene, camera;
-    let currentRotation = BABYLON.Quaternion.Identity();
-    const center = new BABYLON.Vector3(0, 1.5, 0); // Titik pusat ruangan
+    let scene, engine, camera;
 
-    function initScene() {
+    async function initCameraBackground() {
+      try {
+        const video = document.getElementById("cameraFeed");
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+        video.srcObject = stream;
+      } catch (error) {
+        console.warn("Gagal akses kamera.");
+        document.getElementById("cameraFeed").style.display = "none";
+      }
+    }
+
+    async function initScene() {
       const canvas = document.getElementById("renderCanvas");
       engine = new BABYLON.Engine(canvas, true);
       scene = new BABYLON.Scene(engine);
       scene.clearColor = new BABYLON.Color4(0, 0, 0, 0);
 
-      // 🎥 Kamera di tengah ruangan, menghadap ke depan awalnya
-      camera = new BABYLON.FreeCamera("camera", center, scene);
-      camera.rotationQuaternion = currentRotation;
-      camera.attachControl(canvas, false);
-      camera.inputs.removeByType("FreeCameraKeyboardMoveInput");
+      camera = new BABYLON.ArcRotateCamera("camera", Math.PI / 2, Math.PI / 2.2, 3, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
 
       new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // 🚪 Muat model ruangan 3D
-      BABYLON.SceneLoader.Append("", "ruangan.glb", scene, () => {
-        console.log("Ruangan dimuat");
-      });
-
-      // 🔄 Rotasi berdasarkan giroskop, arah vertikal dibalik
-      window.addEventListener("deviceorientation", (event) => {
-        const yaw = BABYLON.Tools.ToRadians(event.alpha || 0); // Horizontal
-        const pitchRaw = 90 - (event.beta || 0);                // Vertikal → dibalik
-        const pitchClamped = Math.max(-60, Math.min(60, pitchRaw)); // Batas
-        const pitch = BABYLON.Tools.ToRadians(pitchClamped);
-
-        const targetRotation = BABYLON.Quaternion.RotationYawPitchRoll(yaw, pitch, 0);
-        currentRotation = BABYLON.Quaternion.Slerp(currentRotation, targetRotation, 0.15);
-
-        camera.rotationQuaternion = currentRotation;
+      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, (meshes) => {
+        const mesh = meshes.find(m => m.name !== "__root__");
+        if (mesh) {
+          mesh.scaling.set(2, 2, 2);
+          mesh.position.set(0, 0, 0);
+          camera.target = mesh.position;
+        }
       });
 
       engine.runRenderLoop(() => scene.render());
       window.addEventListener("resize", () => engine.resize());
     }
 
+    async function checkARSupport() {
+      const statusDiv = document.getElementById("status");
+
+      if (!navigator.xr || !navigator.xr.isSessionSupported) {
+        statusDiv.textContent = "Perangkat ini tidak mendukung WebXR.";
+        return;
+      }
+
+      try {
+        const isSupported = await navigator.xr.isSessionSupported("immersive-ar");
+        if (isSupported) {
+          statusDiv.textContent = "✅ Perangkat mendukung ARCore/WebXR — bisa digunakan untuk AR penuh.";
+        } else {
+          statusDiv.textContent = "⚠️ Perangkat tidak mendukung AR penuh. Menampilkan mode simulasi.";
+        }
+      } catch (err) {
+        statusDiv.textContent = "Gagal memeriksa dukungan AR.";
+        console.warn("XR check failed:", err);
+      }
+    }
+
+    initCameraBackground();
     initScene();
+    checkARSupport();
   </script>
 </body>
 </html>
