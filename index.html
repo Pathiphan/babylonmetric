@@ -1,12 +1,9 @@
-(Web AR)dengan arcore tanpa cdn webxr
-
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Babylon.js AR - Lemari 904E</title>
+  <title>Babylon.js AR - Ruangan Auto Export</title>
 
   <!-- Babylon.js Core -->
   <script src="https://cdn.babylonjs.com/babylon.js"></script>
@@ -64,14 +61,16 @@
 
       new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
 
-      // LOAD FILE LOCALLY
-      BABYLON.SceneLoader.ImportMesh("", "", "Lemari 904E.glb", scene, function (newMeshes) {
+      // LOAD GLB LANGSUNG DARI GITHUB PAGES
+      BABYLON.SceneLoader.ImportMesh("", "assets/", "ruangan_auto.glb", scene, function (newMeshes) {
         const mesh = newMeshes.find(m => m.name !== "__root__");
         if (mesh) {
           mesh.scaling.set(2, 2, 2);
           mesh.position.set(0, 0, 0);
           camera.target = mesh.position;
-          console.log("Model berhasil dimuat dari repo");
+          console.log("✅ Model berhasil dimuat dari GitHub Pages!");
+        } else {
+          console.warn("⚠️ Model tidak ditemukan atau belum dimuat.");
         }
       });
 
@@ -98,7 +97,7 @@
           mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(m));
         });
       } catch (err) {
-        console.error("XR session gagal:", err);
+        console.error("❌ XR session gagal:", err);
         alert("AR tidak bisa dimulai. Pastikan kamu memberi izin kamera dan menggunakan perangkat yang mendukung WebXR.");
       }
     }
