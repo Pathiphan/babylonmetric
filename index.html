@@ -1,19 +1,112 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Upload GLB ke Folder Assets</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Babylon.js AR - Ruangan Viewer</title>
+
+  <!-- Babylon.js Core -->
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <!-- GLTF2 Loader -->
+  <script src="https://cdn.babylonjs.com/loaders/babylon.glTF2FileLoader.js"></script>
+
   <style>
-    body { font-family: sans-serif; padding: 2em; max-width: 500px; margin: auto; }
-    input[type="file"] { margin-bottom: 1em; }
-    button { padding: 0.6em 1.2em; font-size: 1em; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+    }
+    canvas {
+      width: 100vw;
+      height: 100vh;
+      display: block;
+    }
+    #startAR {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 24px;
+      font-size: 16px;
+      background-color: #0078D7;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      z-index: 10;
+    }
+    @media (max-width: 600px) {
+      #startAR {
+        font-size: 14px;
+        padding: 10px 20px;
+      }
+    }
   </style>
 </head>
 <body>
-  <h2>⬆Upload File GLB</h2>
-  <form action="upload.php" method="POST" enctype="multipart/form-data">
-    <input type="file" name="file" accept=".glb" required><br>
-    <button type="submit">Upload</button>
-  </form>
+  <canvas id="renderCanvas"></canvas>
+  <button id="startAR">Mulai AR</button>
+
+  <script>
+    let scene, engine, camera;
+
+    async function initScene() {
+      const canvas = document.getElementById("renderCanvas");
+      engine = new BABYLON.Engine(canvas, true);
+      scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0, 0, 0, 0); // transparan untuk AR
+
+      camera = new BABYLON.ArcRotateCamera("arcCamera", Math.PI / 2, Math.PI / 2.5, 5, BABYLON.Vector3.Zero(), scene);
+      camera.attachControl(canvas, true);
+      camera.lowerRadiusLimit = 1;
+      camera.upperRadiusLimit = 20;
+
+      new BABYLON.HemisphericLight("light1", new BABYLON.Vector3(0, 1, 0), scene);
+
+      // 🔄 Tambahkan cache-bypass agar model terbaru selalu dimuat
+      const timestamp = new Date().getTime();
+      const fileName = `ruangan_auto.glb?t=${timestamp}`;
+
+      BABYLON.SceneLoader.ImportMesh("", "assets/", fileName, scene, function (meshes) {
+        const mesh = meshes.find(m => m.name !== "__root__");
+        if (mesh) {
+          camera.target = mesh.getBoundingInfo().boundingBox.centerWorld;
+          console.log("✅ Model berhasil dimuat:", mesh.name);
+        } else {
+          console.warn("⚠️ Model tidak ditemukan.");
+        }
+      });
+
+      engine.runRenderLoop(() => scene.render());
+      window.addEventListener("resize", () => engine.resize());
+    }
+
+    async function startAR() {
+      try {
+        const xr = await scene.createDefaultXRExperienceAsync({
+          uiOptions: { sessionMode: "immersive-ar" },
+          requiredFeatures: ["hit-test", "local-floor"]
+        });
+
+        const hitTest = xr.baseExperience.featuresManager.enableFeature("xr-hit-test", "latest");
+        hitTest.onHitTestResultObservable.add((results) => {
+          const hit = results[0];
+          const mesh = scene.meshes.find(m => m.name !== "__root__");
+          if (!hit || !mesh) return;
+
+          const mat = hit.transformationMatrix;
+          mesh.position.set(mat[12], mat[13], mat[14]);
+          mesh.rotationQuaternion = BABYLON.Quaternion.FromRotationMatrix(BABYLON.Matrix.FromArray(mat));
+        });
+      } catch (err) {
+        console.error("❌ Gagal memulai AR:", err);
+        alert("AR tidak tersedia. Cek izin kamera dan dukungan WebXR.");
+      }
+    }
+
+    initScene();
+    document.getElementById("startAR").addEventListener("click", startAR);
+  </script>
 </body>
 </html>
